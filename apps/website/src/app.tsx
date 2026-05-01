@@ -1,5 +1,3 @@
-import { Button } from '@r2/ui/components/ui/button.tsx';
+import { LandingPage } from './features/landing/landing-page.tsx';
 
-export function App() {
-  return <Button>Hello world</Button>;
-}
+export const App = () => <LandingPage />;

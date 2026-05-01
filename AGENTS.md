@@ -90,6 +90,7 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 ## Project Conventions
 
 - **Don't run the dev server.** A dev server is already running alongside in another terminal. Don't launch `vp dev` / `pnpm dev` to test changes; rely on `vp check` / `tsc` / dev server logs the user shares.
+- **Targeting a workspace from the repo root.** Use `vp run <pkg-name>#<task>` instead of `cd`-ing into the package. Examples: `vp run @r2/website#build`, `vp run @r2/website#preview`, `vp run @r2/ui#check`. The package name is the `name` field in the workspace's `package.json`.
 
 ## Code & Architecture Conventions (React / TypeScript)
 
@@ -139,3 +140,124 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 
 - Group by feature, not by type. `features/auth/` containing components, hooks, server logic, tests, beats `components/`, `hooks/`, `services/` split across the repo.
 - Shared primitives go in `packages/` (workspace) or `src/shared/` (single app).
+
+## Monorepo Layout
+
+- `apps/website` — public site, Vite app. Composes `@r2/ui` primitives into pages and features. Page-level orchestration lives in `apps/website/src/features/<name>/`.
+- `packages/ui` — shared design system. Tailwind v4 stylesheet (`src/index.css`) owns the design tokens. shadcn primitives live in `src/components/ui/`. Cross-app composite components live directly under `src/components/`.
+- `inspo/` — read-only design references (Claude Design output). Don't import from it; use it as a visual spec.
+
+## Styling Pipeline (Tailwind v4)
+
+`@r2/ui/index.css` is the single Tailwind entry. The package owns the full stylesheet — Tailwind import, plugins, fonts, tokens — and consumers just `import '@r2/ui/index.css';` from their app entry (`main.tsx`).
+
+```css
+/* packages/ui/src/index.css */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/eb-garamond';
+
+@source '.';
+
+@custom-variant dark (&:is(.dark *));
+:root { ... }
+@theme inline { ... }
+@layer base { ... }
+```
+
+Two things make this work:
+
+- **`@source '.';`** in the UI css scans `packages/ui/src/` (the css file's own directory) — Tailwind otherwise excludes `node_modules`, where pnpm symlinks the workspace package.
+- **Vite's cwd** is the app, so the `@tailwindcss/vite` plugin auto-scans the app's source for class usage with no explicit `@source` needed app-side.
+
+Consequence: apps don't need `tailwindcss`, `tw-animate-css`, or `shadcn` as direct dependencies — they come transitively through `@r2/ui`. Apps only depend on `@tailwindcss/vite` (the build plugin) and `@r2/ui`.
+
+If an app starts using utility classes generated from another workspace package (e.g. `@r2/forms`), add `@source '../../forms/src';` (or however the relative path resolves) inside that package's css, mirroring the UI pattern. Avoid app-level `@source` directives that point into workspace packages — they create a coupling the app shouldn't own.
+
+## Design Tokens
+
+The token system is layered. All tokens live in `packages/ui/src/index.css`:
+
+1. **Brand palette (raw)** — `--paper`, `--paper-deep`, `--paper-shade`, `--ink`, `--ink-soft`, `--ink-muted`, `--terracotta`, `--gold`, `--gold-deep`, `--burgundy`, `--night`. The vintage / warm-paper / terracotta / antique-gold base.
+2. **Semantic shadcn tokens** — `--background`, `--foreground`, `--primary`, etc. — mapped from the brand palette so shadcn primitives inherit the wedding aesthetic out of the box. Don't hardcode hex; map through these.
+3. **Tailwind theme** — exposed via `@theme inline` so utilities like `bg-paper`, `text-ink`, `text-gold`, `font-heading` are available everywhere.
+4. **Fonts** — `--font-sans` (Inter Variable) for UI/labels, `--font-heading` (EB Garamond Variable) for editorial display. Use `font-sans` and `font-heading` Tailwind utilities.
+
+When extending the token set, add the raw value to `:root`, expose it under `@theme inline`, and document the intent here.
+
+## Components: compound + native-prop extension
+
+Two patterns, used together.
+
+**Native-prop extension.** Always extend the underlying HTML element's props with `React.ComponentPropsWithoutRef<'button'>` (or `'section'`, `'a'`, etc.). For wrappers around third-party components, use `React.ComponentProps<typeof X>`. Consumers get `ref`, `aria-*`, `onClick` etc. for free.
+
+**Variants via `cva` + `cn`.** Whenever a component exposes more than one variant (size, tone, intent, ...), use `class-variance-authority` (`cva`) and `cn` from `#/lib/utils.ts`. No ad-hoc `Record<Variant, string>` lookup objects, no inline ternary chains. Mirror the shape of `packages/ui/src/components/ui/button.tsx`.
+
+```tsx
+import type { ComponentPropsWithoutRef } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+
+import { cn } from '#/lib/utils.ts';
+
+const ruleVariants = cva('h-px', {
+  variants: {
+    tone: {
+      gold: 'bg-gold/50',
+      paper: 'bg-paper/30',
+    },
+    width: {
+      sm: 'w-10',
+      md: 'w-15',
+      lg: 'w-24',
+    },
+  },
+  defaultVariants: { tone: 'gold', width: 'md' },
+});
+
+type RuleProps = ComponentPropsWithoutRef<'div'> & VariantProps<typeof ruleVariants>;
+
+export const Rule = ({ tone, width, className, ...props }: RuleProps) => (
+  <div className={cn(ruleVariants({ tone, width }), className)} {...props} />
+);
+```
+
+**Compound components.** Larger primitives expose every part — including the root — under an explicit namespace object. Always `<Hero.Root>`, never `<Hero>`. Sub-parts extend their native element so consumers can pass `id`, `className`, `onClick`.
+
+```tsx
+const HeroRoot = ({ className, ...props }: ComponentPropsWithoutRef<'section'>) => (
+  <section
+    className={cn('relative h-screen min-h-[720px] overflow-hidden bg-night', className)}
+    {...props}
+  />
+);
+
+const HeroMonogram = ({ className, ...props }: ComponentPropsWithoutRef<'h1'>) => (
+  <h1 className={cn('font-heading italic text-[clamp(140px,28vw,380px)]', className)} {...props} />
+);
+
+export const Hero = {
+  Root: HeroRoot,
+  Monogram: HeroMonogram,
+};
+```
+
+Consumed as:
+
+```tsx
+<Hero.Root>
+  <Hero.Monogram>R2</Hero.Monogram>
+</Hero.Root>
+```
+
+Rules:
+
+- Root function and each sub-part are standalone `const`s, exposed through a plain namespace object at the bottom of the file. No `Object.assign` on the root function — the root is just `Namespace.Root`.
+- No barrel `index.ts`. Consumers import the compound from its file: `import { Hero } from '@r2/ui/components/hero.tsx'`.
+- One compound per file, the filename matches the namespace (`hero.tsx`).
+- For shadcn primitives that ship many sub-components by name (`Dialog`, `DialogTrigger`, ...), keep that flat shape — it's the upstream contract.
+
+## Comments
+
+Default to writing no comments. Only add a comment when the _why_ is non-obvious: a hidden constraint, a workaround, a subtle invariant. Don't restate what the code already says, don't label sections with "/_ Brand palette _/" style banners, don't write "exposed as max-w-{name} utilities" next to a token whose name already implies it. If removing the comment wouldn't confuse a future reader, don't write it.

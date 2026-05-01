@@ -10,7 +10,7 @@
     "./*": "./src/*"
   },
   "dependencies": {
-    "@fontsource-variable/eb-garamond": "catalog:",
+    "@fontsource-variable/cormorant-garamond": "catalog:",
     "@fontsource-variable/inter": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",

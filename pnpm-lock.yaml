@@ -6,9 +6,9 @@ settings:
 
 catalogs:
   default:
-    '@fontsource-variable/eb-garamond':
-      specifier: ^5.2.7
-      version: 5.2.7
+    '@fontsource-variable/cormorant-garamond':
+      specifier: ^5.2.6
+      version: 5.2.6
     '@fontsource-variable/inter':
       specifier: ^5.2.8
       version: 5.2.8
@@ -112,9 +112,9 @@ importers:
 
   packages/ui:
     dependencies:
-      '@fontsource-variable/eb-garamond':
+      '@fontsource-variable/cormorant-garamond':
         specifier: 'catalog:'
-        version: 5.2.7
+        version: 5.2.6
       '@fontsource-variable/inter':
         specifier: 'catalog:'
         version: 5.2.8
@@ -327,8 +327,8 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@fontsource-variable/eb-garamond@5.2.7':
-    resolution: {integrity: sha512-TbR+Pun4k5g85lgdxRNSbWka5vJgi9pzdFzFswgf7/7NRhKssvoumft1+ZGz3n91YYet96JcnjWrgPGGj6JTzg==}
+  '@fontsource-variable/cormorant-garamond@5.2.6':
+    resolution: {integrity: sha512-5vHPJWMuTbVoB6OnorCflWJ51NJZ7eQWw58tVFUE/hHphTi/z2vrKESbuMSJ3diOC5KgPm/RLv2ULur+N1NLJQ==}
 
   '@fontsource-variable/inter@5.2.8':
     resolution: {integrity: sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ==}
@@ -3521,7 +3521,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@fontsource-variable/eb-garamond@5.2.7': {}
+  '@fontsource-variable/cormorant-garamond@5.2.6': {}
 
   '@fontsource-variable/inter@5.2.8': {}
 
