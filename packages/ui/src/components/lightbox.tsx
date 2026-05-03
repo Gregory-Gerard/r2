@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -11,9 +12,11 @@ import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
 
 import { blurhashToDataUrl } from '#/lib/blurhash.ts';
 import { cn } from '#/lib/utils.ts';
-import { useDrag } from '#/lib/use-drag.ts';
+import { usePhotoGesture } from '#/lib/use-photo-gesture.ts';
 import { Rule } from '#/components/rule.tsx';
 import type { MosaicPhoto } from '#/components/mosaic.tsx';
+
+const TRANSITION = '240ms cubic-bezier(0.2, 0, 0, 1)';
 
 export type LightboxState = {
   photos: readonly MosaicPhoto[];
@@ -30,24 +33,6 @@ type LightboxProps = {
 export const Lightbox = ({ state, onClose, onNav }: LightboxProps) => {
   const open = state !== null;
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') {
-        onNav({ delta: -1 });
-      } else if (event.key === 'ArrowRight') {
-        onNav({ delta: 1 });
-      }
-    };
-
-    window.addEventListener('keydown', onKey);
-
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onNav]);
-
   return (
     <DialogPrimitive.Root
       open={open}
@@ -60,7 +45,7 @@ export const Lightbox = ({ state, onClose, onNav }: LightboxProps) => {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-night/95 duration-200 supports-backdrop-filter:backdrop-blur-md data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-50 flex touch-pinch-zoom items-center justify-center overflow-hidden outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          className="fixed inset-0 z-50 flex touch-none items-center justify-center overflow-hidden outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <VisuallyHidden.Root>
@@ -95,15 +80,19 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
   const [animating, setAnimating] = useState(false);
   const [pending, setPending] = useState<Pending>(null);
 
-  const dragBind = useDrag({
-    onMove: (delta) => {
+  const {
+    bind: gestureBind,
+    zoom,
+    reset: resetZoom,
+  } = usePhotoGesture({
+    onSwipeMove: (delta) => {
       if (animating) {
         return;
       }
 
-      setDrag(delta);
+      setDrag((prev) => (prev.x === delta.x && prev.y === delta.y ? prev : delta));
     },
-    onEnd: ({ x, y }) => {
+    onSwipeEnd: ({ x, y }) => {
       if (animating) {
         return;
       }
@@ -133,27 +122,52 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
         setDrag({ x: 0, y: 0 });
       }
     },
-    onCancel: () => {
+    onSwipeCancel: () => {
       if (animating) {
         return;
       }
 
+      // Snap instantly so the wrapper is centered before the pinch math
+      // (which assumes the active panel is at viewport center) kicks in.
       if (drag.x !== 0 || drag.y !== 0) {
-        setAnimating(true);
         setDrag({ x: 0, y: 0 });
       }
     },
   });
 
+  const zoomed = zoom.scale > 1;
+
+  const navigate = useCallback(
+    (delta: -1 | 1) => {
+      resetZoom();
+      onNav({ delta });
+    },
+    [resetZoom, onNav],
+  );
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        navigate(-1);
+      } else if (event.key === 'ArrowRight') {
+        navigate(1);
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navigate]);
+
   const handleTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
-    if (event.propertyName !== 'transform') {
+    if (event.propertyName !== 'transform' || event.target !== event.currentTarget) {
       return;
     }
 
     if (pending === 'next') {
-      onNav({ delta: 1 });
+      navigate(1);
     } else if (pending === 'prev') {
-      onNav({ delta: -1 });
+      navigate(-1);
     } else if (pending === 'close') {
       onClose();
     }
@@ -167,8 +181,7 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
     return null;
   }
 
-  const fade =
-    pending === 'close' ? 0 : Math.max(0.5, 1 - Math.max(0, drag.y) / window.innerHeight);
+  const fade = pending === 'close' ? 0 : Math.max(0.5, 1 - drag.y / window.innerHeight);
 
   return (
     <>
@@ -176,33 +189,27 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
         <XIcon className="h-6 w-6" />
       </LightboxButton>
 
-      <LightboxButton
-        variant="prev"
-        onClick={() => onNav({ delta: -1 })}
-        aria-label="Photo précédente"
-      >
-        <ChevronLeftIcon className="h-8 w-8" />
-      </LightboxButton>
+      {zoomed ? null : (
+        <>
+          <LightboxButton variant="prev" onClick={() => navigate(-1)} aria-label="Photo précédente">
+            <ChevronLeftIcon className="h-8 w-8" />
+          </LightboxButton>
 
-      <LightboxButton
-        variant="next"
-        onClick={() => onNav({ delta: 1 })}
-        aria-label="Photo suivante"
-      >
-        <ChevronRightIcon className="h-8 w-8" />
-      </LightboxButton>
+          <LightboxButton variant="next" onClick={() => navigate(1)} aria-label="Photo suivante">
+            <ChevronRightIcon className="h-8 w-8" />
+          </LightboxButton>
+        </>
+      )}
 
       <div
-        {...dragBind}
+        {...gestureBind}
         onTransitionEnd={handleTransitionEnd}
         className="absolute top-0 left-0 flex h-full"
         style={{
           width: '300vw',
           transform: `translate3d(calc(-100vw + ${drag.x}px), ${drag.y}px, 0)`,
           opacity: fade,
-          transition: animating
-            ? 'transform 240ms cubic-bezier(0.2, 0, 0, 1), opacity 240ms cubic-bezier(0.2, 0, 0, 1)'
-            : 'none',
+          transition: animating ? `transform ${TRANSITION}, opacity ${TRANSITION}` : 'none',
           willChange: 'transform',
         }}
       >
@@ -215,6 +222,7 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
           key={photo.id}
           photo={photo}
           alt={`${meta.chapterLabel} — photo ${index + 1}`}
+          zoom={zoom}
         />
         <LightboxPanel
           key={next.id}
@@ -237,10 +245,22 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
 type LightboxPanelProps = {
   photo: MosaicPhoto;
   alt: string;
+  zoom?: { scale: number; tx: number; ty: number; animating: boolean };
 };
 
-const LightboxPanel = ({ photo, alt }: LightboxPanelProps) => (
-  <div className="flex h-full w-screen shrink-0 items-center justify-center">
+const LightboxPanel = ({ photo, alt, zoom }: LightboxPanelProps) => (
+  <div
+    className="flex h-full w-screen shrink-0 items-center justify-center"
+    style={
+      zoom
+        ? {
+            transform: `translate3d(${zoom.tx}px, ${zoom.ty}px, 0) scale(${zoom.scale})`,
+            transition: zoom.animating ? `transform ${TRANSITION}` : 'none',
+            willChange: 'transform',
+          }
+        : undefined
+    }
+  >
     <LightboxImage photo={photo} alt={alt} />
   </div>
 );
