@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ComponentPropsWithoutRef } from 'react';
+import { memo, useCallback, useMemo, useState, type ComponentPropsWithoutRef } from 'react';
 import { RowsPhotoAlbum, type Photo as AlbumImage, type RenderImage } from 'react-photo-album';
 
 import { blurhashToDataUrl } from '#/lib/blurhash.ts';
@@ -36,7 +36,7 @@ const targetRowHeight = (containerWidth: number) => {
   return 360;
 };
 
-export const Mosaic = ({ photos, alt, onPhotoClick, className, ...props }: MosaicProps) => {
+export const Mosaic = memo(({ photos, alt, onPhotoClick, className, ...props }: MosaicProps) => {
   const albumPhotos = useMemo<AlbumPhoto[]>(
     () =>
       photos.map((photo, index) => ({
@@ -72,7 +72,8 @@ export const Mosaic = ({ photos, alt, onPhotoClick, className, ...props }: Mosai
       />
     </div>
   );
-};
+});
+Mosaic.displayName = 'Mosaic';
 
 type MosaicTileProps = {
   photo: AlbumPhoto;
