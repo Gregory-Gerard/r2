@@ -4,8 +4,13 @@ export default defineConfig({
   fmt: {
     singleQuote: true,
   },
-  lint: { options: { typeAware: true, typeCheck: true } },
-  run: {
-    cache: true,
+  lint: {
+    options: { typeAware: true, typeCheck: true },
+    rules: {
+      curly: ['error', 'all'],
+    },
+  },
+  test: {
+    silent: 'passed-only',
   },
 });

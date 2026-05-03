@@ -136,6 +136,29 @@ For GitHub Actions, consider using [`voidzero-dev/setup-vp`](https://github.com/
 - No non-null assertions (`!`) unless the invariant is obvious and commented in one line.
 - Prefer `type` aliases over `interface` for domain types; keep `interface` for object shapes meant to be extended/merged.
 
+### Statement spacing
+
+- **No one-line `if`.** Always braces, body on its own line. Enforced by `eslint/curly: ['error', 'all']` in `vite.config.ts`.
+- **Blank line before `if`, `for`, `while`, `switch`, `try`, `return`, `throw`** when it isn't the first statement of the enclosing block. Lets the eye land on each branch and exit point.
+- **Blank line after the closing `}`** of an `if`/`for`/`while`/`switch`/`try` block, unless the next token is `}` or `else`.
+- Sequential simple statements (consts, assignments, expression calls) don't need separating blank lines. Group them by purpose.
+
+```ts
+export const loadCache = async (): Promise<Cache> => {
+  if (!existsSync(CACHE_PATH)) {
+    return { version: 1, photos: {} };
+  }
+
+  const raw = await readFile(CACHE_PATH, 'utf8');
+
+  return JSON.parse(raw) as Cache;
+};
+```
+
+### Lint & format config
+
+Oxlint + Oxfmt run via Vite+. Configure both in `vite.config.ts` under `lint` and `fmt` (don't create `.oxlintrc.json` / `.oxfmtrc.json`). The `lint.options` object is reserved for vite-plus-specific flags (`typeAware`, `typeCheck`, ...); oxlint rules go at `lint.rules`. Same split for `fmt`.
+
 ### Project structure
 
 - Group by feature, not by type. `features/auth/` containing components, hooks, server logic, tests, beats `components/`, `hooks/`, `services/` split across the repo.
