@@ -8,6 +8,8 @@ jobs:
   ready:
     name: Check, Test, Build
     runs-on: ubuntu-latest
+    env:
+      PUBLIC_BASE_URL: ${{ secrets.PUBLIC_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
