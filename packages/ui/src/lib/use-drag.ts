@@ -7,6 +7,7 @@ type Axis = 'x' | 'y' | 'none';
 type UseDragOptions = {
   onMove?: (delta: Delta) => void;
   onEnd?: (delta: Delta) => void;
+  onCancel?: () => void;
   axisLockThreshold?: number;
 };
 
@@ -17,8 +18,9 @@ type DragState = {
   axis: Axis;
 };
 
-export const useDrag = ({ onMove, onEnd, axisLockThreshold = 10 }: UseDragOptions) => {
+export const useDrag = ({ onMove, onEnd, onCancel, axisLockThreshold = 10 }: UseDragOptions) => {
   const start = useRef<DragState | null>(null);
+  const pointers = useRef(new Set<number>());
 
   // Once a direction crosses the threshold, lock the gesture to that axis and zero the other
   // until release. Prevents diagonal drift between horizontal nav and vertical close.
@@ -48,6 +50,19 @@ export const useDrag = ({ onMove, onEnd, axisLockThreshold = 10 }: UseDragOption
         return;
       }
 
+      pointers.current.add(event.pointerId);
+
+      // Second finger landed (e.g. pinch starting): abort the drag so the panel
+      // snaps back instead of sliding while the browser takes over for pinch.
+      if (pointers.current.size > 1) {
+        if (start.current) {
+          start.current = null;
+          onCancel?.();
+        }
+
+        return;
+      }
+
       start.current = {
         x: event.clientX,
         y: event.clientY,
@@ -73,6 +88,8 @@ export const useDrag = ({ onMove, onEnd, axisLockThreshold = 10 }: UseDragOption
       onMove?.(delta);
     },
     onPointerUp: (event: PointerEvent) => {
+      pointers.current.delete(event.pointerId);
+
       if (!start.current || event.pointerId !== start.current.pointerId) {
         return;
       }
@@ -87,8 +104,11 @@ export const useDrag = ({ onMove, onEnd, axisLockThreshold = 10 }: UseDragOption
       onEnd?.(delta);
     },
     onPointerCancel: (event: PointerEvent) => {
+      pointers.current.delete(event.pointerId);
+
       if (start.current?.pointerId === event.pointerId) {
         start.current = null;
+        onCancel?.();
       }
     },
   };

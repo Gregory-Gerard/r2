@@ -60,7 +60,7 @@ export const Lightbox = ({ state, onClose, onNav }: LightboxProps) => {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-night/95 duration-200 supports-backdrop-filter:backdrop-blur-md data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-50 flex touch-none items-center justify-center overflow-hidden outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          className="fixed inset-0 z-50 flex touch-pinch-zoom items-center justify-center overflow-hidden outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <VisuallyHidden.Root>
@@ -125,6 +125,16 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
         setPending('close');
         setDrag({ x: 0, y: window.innerHeight });
 
+        return;
+      }
+
+      if (drag.x !== 0 || drag.y !== 0) {
+        setAnimating(true);
+        setDrag({ x: 0, y: 0 });
+      }
+    },
+    onCancel: () => {
+      if (animating) {
         return;
       }
 
