@@ -19,7 +19,14 @@ if (!baseUrl) {
   throw new Error('PUBLIC_BASE_URL is not set (define it in .env.local at the repo root)');
 }
 
+const heroImageUrl = process.env.VITE_HERO_IMAGE_URL ?? '/hero-couple.jpg';
+
+const htmlVars = () => ({
+  name: 'r2-html-vars',
+  transformIndexHtml: (html: string) => html.replaceAll('%HERO_IMAGE_URL%', heroImageUrl),
+});
+
 export default defineConfig({
   envDir: repoRoot,
-  plugins: [react(), tailwindcss(), r2Photos({ baseUrl })],
+  plugins: [react(), tailwindcss(), r2Photos({ baseUrl }), htmlVars()],
 });
