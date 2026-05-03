@@ -1,12 +1,17 @@
-import { useEffect, useMemo, useState, type ComponentPropsWithoutRef } from 'react';
-import { preload } from 'react-dom';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentPropsWithoutRef,
+  type TransitionEvent,
+} from 'react';
 import { Dialog as DialogPrimitive, VisuallyHidden } from 'radix-ui';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
 
 import { blurhashToDataUrl } from '#/lib/blurhash.ts';
 import { cn } from '#/lib/utils.ts';
-import { useSwipe } from '#/lib/use-swipe.ts';
+import { useDrag } from '#/lib/use-drag.ts';
 import { Rule } from '#/components/rule.tsx';
 import type { MosaicPhoto } from '#/components/mosaic.tsx';
 
@@ -24,11 +29,6 @@ type LightboxProps = {
 
 export const Lightbox = ({ state, onClose, onNav }: LightboxProps) => {
   const open = state !== null;
-  const swipe = useSwipe({
-    onSwipeLeft: () => onNav({ delta: 1 }),
-    onSwipeRight: () => onNav({ delta: -1 }),
-    onSwipeDown: onClose,
-  });
 
   useEffect(() => {
     if (!open) {
@@ -60,9 +60,8 @@ export const Lightbox = ({ state, onClose, onNav }: LightboxProps) => {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-night/95 duration-200 supports-backdrop-filter:backdrop-blur-md data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-50 flex touch-none items-center justify-center outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          className="fixed inset-0 z-50 flex touch-none items-center justify-center overflow-hidden outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           onOpenAutoFocus={(event) => event.preventDefault()}
-          {...swipe}
         >
           <VisuallyHidden.Root>
             <DialogPrimitive.Title>
@@ -83,6 +82,8 @@ type LightboxBodyProps = {
   onNav: (input: { delta: -1 | 1 }) => void;
 };
 
+type Pending = 'next' | 'prev' | 'close' | null;
+
 const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
   const { photos, index, meta } = state;
   const photo = photos[index];
@@ -90,24 +91,77 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
   const next = photos[(index + 1) % total];
   const prev = photos[(index - 1 + total) % total];
 
-  useEffect(() => {
-    if (next) {
-      preload(next.src, { as: 'image', imageSrcSet: next.srcSet.webp, imageSizes: '95vw' });
+  const [drag, setDrag] = useState({ x: 0, y: 0 });
+  const [animating, setAnimating] = useState(false);
+  const [pending, setPending] = useState<Pending>(null);
+
+  const dragBind = useDrag({
+    onMove: (delta) => {
+      if (animating) {
+        return;
+      }
+
+      setDrag(delta);
+    },
+    onEnd: ({ x, y }) => {
+      if (animating) {
+        return;
+      }
+
+      const xThreshold = window.innerWidth * 0.2;
+      const yThreshold = window.innerHeight * 0.18;
+      const horizontal = Math.abs(x) > Math.abs(y);
+
+      if (horizontal && Math.abs(x) > xThreshold) {
+        setAnimating(true);
+        setPending(x < 0 ? 'next' : 'prev');
+        setDrag({ x: Math.sign(x) * window.innerWidth, y: 0 });
+
+        return;
+      }
+
+      if (!horizontal && y > yThreshold) {
+        setAnimating(true);
+        setPending('close');
+        setDrag({ x: 0, y: window.innerHeight });
+
+        return;
+      }
+
+      if (drag.x !== 0 || drag.y !== 0) {
+        setAnimating(true);
+        setDrag({ x: 0, y: 0 });
+      }
+    },
+  });
+
+  const handleTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
+    if (event.propertyName !== 'transform') {
+      return;
     }
 
-    if (prev) {
-      preload(prev.src, { as: 'image', imageSrcSet: prev.srcSet.webp, imageSizes: '95vw' });
+    if (pending === 'next') {
+      onNav({ delta: 1 });
+    } else if (pending === 'prev') {
+      onNav({ delta: -1 });
+    } else if (pending === 'close') {
+      onClose();
     }
-  }, [next, prev]);
+
+    setAnimating(false);
+    setPending(null);
+    setDrag({ x: 0, y: 0 });
+  };
 
   if (!photo) {
     return null;
   }
 
+  const fade =
+    pending === 'close' ? 0 : Math.max(0.5, 1 - Math.max(0, drag.y) / window.innerHeight);
+
   return (
     <>
-      <div aria-hidden className="absolute inset-0 cursor-zoom-out" onClick={onClose} />
-
       <LightboxButton variant="close" onClick={onClose} aria-label="Fermer">
         <XIcon className="h-6 w-6" />
       </LightboxButton>
@@ -128,11 +182,36 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
         <ChevronRightIcon className="h-8 w-8" />
       </LightboxButton>
 
-      <LightboxImage
-        key={photo.id}
-        photo={photo}
-        alt={`${meta.chapterLabel} — photo ${index + 1}`}
-      />
+      <div
+        {...dragBind}
+        onTransitionEnd={handleTransitionEnd}
+        className="absolute top-0 left-0 flex h-full"
+        style={{
+          width: '300vw',
+          transform: `translate3d(calc(-100vw + ${drag.x}px), ${drag.y}px, 0)`,
+          opacity: fade,
+          transition: animating
+            ? 'transform 240ms cubic-bezier(0.2, 0, 0, 1), opacity 240ms cubic-bezier(0.2, 0, 0, 1)'
+            : 'none',
+          willChange: 'transform',
+        }}
+      >
+        <LightboxPanel
+          key={prev.id}
+          photo={prev}
+          alt={`${meta.chapterLabel} — photo ${((index - 1 + total) % total) + 1}`}
+        />
+        <LightboxPanel
+          key={photo.id}
+          photo={photo}
+          alt={`${meta.chapterLabel} — photo ${index + 1}`}
+        />
+        <LightboxPanel
+          key={next.id}
+          photo={next}
+          alt={`${meta.chapterLabel} — photo ${((index + 1) % total) + 1}`}
+        />
+      </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex items-center justify-center gap-4 px-6 font-sans text-[10px] tracking-[0.32em] text-cream/70 uppercase">
         <span>CH. {meta.chapterNum}</span>
@@ -144,6 +223,17 @@ const LightboxBody = ({ state, onClose, onNav }: LightboxBodyProps) => {
     </>
   );
 };
+
+type LightboxPanelProps = {
+  photo: MosaicPhoto;
+  alt: string;
+};
+
+const LightboxPanel = ({ photo, alt }: LightboxPanelProps) => (
+  <div className="flex h-full w-screen shrink-0 items-center justify-center">
+    <LightboxImage photo={photo} alt={alt} />
+  </div>
+);
 
 const lightboxButtonVariants = cva(
   'absolute z-10 grid place-items-center transition-colors hover:text-cream',
