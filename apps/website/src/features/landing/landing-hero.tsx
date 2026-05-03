@@ -2,9 +2,12 @@ import { Hero } from '@r2/ui/components/hero.tsx';
 import { Monogram } from '@r2/ui/components/monogram.tsx';
 import { Rule } from '@r2/ui/components/rule.tsx';
 
+// Override at build time via VITE_HERO_IMAGE_URL in .env.local. Keeps the real photo off the public repo.
+const heroImageSrc = import.meta.env.VITE_HERO_IMAGE_URL ?? '/hero-couple.jpg';
+
 export const LandingHero = () => (
   <Hero.Root id="top">
-    <Hero.Image src="/hero-couple.jpg" alt="Romane et Rémy" />
+    <Hero.Image src={heroImageSrc} alt="Romane et Rémy" />
     <Hero.Vignette />
 
     <Hero.Nav>

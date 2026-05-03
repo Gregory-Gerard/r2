@@ -20,5 +20,6 @@ if (!baseUrl) {
 }
 
 export default defineConfig({
+  envDir: repoRoot,
   plugins: [react(), tailwindcss(), r2Photos({ baseUrl })],
 });
