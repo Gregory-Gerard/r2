@@ -6,6 +6,7 @@ import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
 
 import { blurhashToDataUrl } from '#/lib/blurhash.ts';
 import { cn } from '#/lib/utils.ts';
+import { useSwipe } from '#/lib/use-swipe.ts';
 import { Rule } from '#/components/rule.tsx';
 import type { MosaicPhoto } from '#/components/mosaic.tsx';
 
@@ -23,6 +24,11 @@ type LightboxProps = {
 
 export const Lightbox = ({ state, onClose, onNav }: LightboxProps) => {
   const open = state !== null;
+  const swipe = useSwipe({
+    onSwipeLeft: () => onNav({ delta: 1 }),
+    onSwipeRight: () => onNav({ delta: -1 }),
+    onSwipeDown: onClose,
+  });
 
   useEffect(() => {
     if (!open) {
@@ -54,8 +60,9 @@ export const Lightbox = ({ state, onClose, onNav }: LightboxProps) => {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-night/95 duration-200 supports-backdrop-filter:backdrop-blur-md data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-50 flex items-center justify-center outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          className="fixed inset-0 z-50 flex touch-none items-center justify-center outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           onOpenAutoFocus={(event) => event.preventDefault()}
+          {...swipe}
         >
           <VisuallyHidden.Root>
             <DialogPrimitive.Title>
