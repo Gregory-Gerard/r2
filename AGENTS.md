@@ -281,6 +281,49 @@ Rules:
 - One compound per file, the filename matches the namespace (`hero.tsx`).
 - For shadcn primitives that ship many sub-components by name (`Dialog`, `DialogTrigger`, ...), keep that flat shape — it's the upstream contract.
 
+## Photos Pipeline
+
+Photos live on S3 and are exposed to the website via a build-time virtual module — there's no fetch at runtime.
+
+**Sync (`tools/photos`).** Drop your originals into `.photos/<chapter-slug>/<name>-<order>.jpg` at the repo root. `vp run @r2/photos#sync` walks that tree, hashes each file, transforms it (multi-size AVIF + WebP + blurhash), uploads variants and a fresh `manifest.json` to S3, and updates a local cache so unchanged files are skipped on the next run. Treat it as a black box: `vp run @r2/photos#sync` to publish, `--dry-run` to preview. Implementation details (cache shape, sharp options, S3 keys) are in `tools/photos/src/`.
+
+**Manifest on S3.** A single JSON at `<PUBLIC_BASE_URL>/manifest.json`, sorted by `chapter` then `order`. Each entry on S3:
+
+```ts
+{
+  id: string;        // short content hash, identifies the photo
+  chapter: string;   // slug, matches the source dir name
+  order: number;
+  width: number;
+  height: number;
+  blurhash: string;
+  sources: {
+    avif: { 400, 800, 1600, 2400: string };
+    webp: { 400, 800, 1600, 2400: string };
+  };
+}
+```
+
+Chapter slugs are stable, derived from folder names with `slugify` (NFD-normalized, lowercased, non-alphanum → `-`). They're the join key between the manifest and the website.
+
+**Plugin (`apps/website/plugins/r2-photos.ts`).** Fetches `manifest.json` once at `buildStart`, **strips the `sources` URLs from each photo** (they're fully derivable from `id` + size + format), and exposes a virtual module:
+
+```ts
+import { photos, manifest, photoUrl, type Photo } from 'virtual:r2-photos';
+```
+
+Each photo in the bundle keeps only `{ id, chapter, order, width, height, blurhash }`. URLs are reconstructed on demand via `photoUrl(id, format, size)`, which the plugin inlines as `` `${PUBLIC_BASE_URL}/photos/${id}/w${size}.${format}` ``. This keeps the inlined manifest small without losing the synchronous-access ergonomics.
+
+Types live in `apps/website/src/r2-photos.d.ts`. `PUBLIC_BASE_URL` is required and read from `.env.local` at the repo root.
+
+**Consuming photos in the app.** Don't import `virtual:r2-photos` directly from feature components — go through `apps/website/src/features/photos/photos-service.ts`, which exposes `getPhotosByChapter(slug)`, `getChapterCount(slug)`, `photoUrl(id, format, size)` and `buildSrcSet(id, format)`. It's a thin domain accessor that groups the manifest once and centralises URL/srcset construction.
+
+**Rendering.** `Mosaic` in `@r2/ui` is URL-agnostic: it accepts `MosaicPhoto` items already shaped for rendering — `{ id, width, height, blurhash, src, srcSet: { avif, webp } }`. The consumer materialises that shape from the trimmed manifest using `photoUrl` and `buildSrcSet`. Mosaic renders each tile through `<picture>` with AVIF + WebP `<source>` srcsets, lazy-mounts via IntersectionObserver, and shows a blurhash placeholder until the image loads.
+
+## No data-driven JSX for what is just a component
+
+Don't create arrays of static metadata (`CHAPTERS`, `NAV_LINKS`, ...) and then `.map()` them into JSX when the items are known, finite, and rarely change. Write the items as plain JSX, one block per item. It reads better, jumps to definition cleanly, and you don't have to chase a config object to understand a render. Reserve `.map()` for genuinely dynamic data (manifest entries, paginated results, user input). Service-style accessors (`getPhotosByChapter(slug)`, `getChapterCount(slug)`) are fine, they're domain helpers, not config.
+
 ## Comments
 
 Default to writing no comments. Only add a comment when the _why_ is non-obvious: a hidden constraint, a workaround, a subtle invariant. Don't restate what the code already says, don't label sections with "/_ Brand palette _/" style banners, don't write "exposed as max-w-{name} utilities" next to a token whose name already implies it. If removing the comment wouldn't confuse a future reader, don't write it.

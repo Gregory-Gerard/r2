@@ -7,21 +7,57 @@ type R2PhotosOptions = {
 const VIRTUAL_ID = 'virtual:r2-photos';
 const RESOLVED_ID = `\0${VIRTUAL_ID}`;
 
+type RawPhoto = {
+  id: string;
+  chapter: string;
+  order: number;
+  width: number;
+  height: number;
+  blurhash: string;
+  sources?: unknown;
+};
+
+type RawManifest = {
+  version: number;
+  generatedAt: string;
+  photos: RawPhoto[];
+};
+
 export const r2Photos = ({ baseUrl }: R2PhotosOptions): Plugin => {
+  const cdnBase = baseUrl.replace(/\/+$/, '');
   let manifestModule: string | null = null;
 
   return {
     name: 'r2-photos',
     async buildStart() {
-      const url = `${baseUrl.replace(/\/+$/, '')}/manifest.json`;
+      const url = `${cdnBase}/manifest.json`;
       const res = await fetch(url);
 
       if (!res.ok) {
         this.error(`failed to fetch r2 photos manifest at ${url}: ${res.status} ${res.statusText}`);
       }
 
-      const json = await res.text();
-      manifestModule = `export const manifest = ${json};\nexport const photos = manifest.photos;\n`;
+      const raw: RawManifest = await res.json();
+      const trimmed = {
+        version: raw.version,
+        generatedAt: raw.generatedAt,
+        photos: raw.photos.map(({ id, chapter, order, width, height, blurhash }) => ({
+          id,
+          chapter,
+          order,
+          width,
+          height,
+          blurhash,
+        })),
+      };
+
+      manifestModule = [
+        `export const manifest = ${JSON.stringify(trimmed)};`,
+        `export const photos = manifest.photos;`,
+        `const baseUrl = ${JSON.stringify(cdnBase)};`,
+        `export const photoUrl = (id, format, size) => \`\${baseUrl}/photos/\${id}/w\${size}.\${format}\`;`,
+        '',
+      ].join('\n');
     },
     resolveId(id) {
       if (id === VIRTUAL_ID) {

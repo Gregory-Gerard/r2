@@ -18,7 +18,7 @@ export const LandingPrologue = () => (
           et toute la chaleur de cette journée.
         </p>
         <p>
-          Voici, enfin réunies, les images de ce jour si spécial — classées en sept chapitres, dans
+          Voici, enfin réunies, les images de ce jour si spécial — classées en six chapitres, dans
           l&apos;ordre où elles ont été vécues. Prenez le temps de les feuilleter ; chaque photo est
           un souvenir que nous partageons avec vous.
         </p>

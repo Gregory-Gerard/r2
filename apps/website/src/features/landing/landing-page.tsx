@@ -1,3 +1,4 @@
+import { LandingChapters } from './landing-chapters.tsx';
 import { LandingEpilogue } from './landing-epilogue.tsx';
 import { LandingFacts } from './landing-facts.tsx';
 import { LandingHero } from './landing-hero.tsx';
@@ -10,6 +11,7 @@ export const LandingPage = () => (
     <LandingPrologue />
     <LandingFacts />
     <LandingToc />
+    <LandingChapters />
     <LandingEpilogue />
   </>
 );

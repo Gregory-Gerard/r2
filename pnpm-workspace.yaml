@@ -24,6 +24,7 @@ catalog:
   radix-ui: ^1.4.3
   react: ^19.2.5
   react-dom: ^19.2.5
+  react-photo-album: ^3.2.1
   shadcn: ^4.6.0
   sharp: ^0.34.1
   tailwind-merge: ^3.5.0

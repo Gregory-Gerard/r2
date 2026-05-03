@@ -2,6 +2,8 @@ import { Eyebrow } from '@r2/ui/components/eyebrow.tsx';
 import { Section } from '@r2/ui/components/section.tsx';
 import { TableOfContents } from '@r2/ui/components/table-of-contents.tsx';
 
+import { getChapterCount } from '../photos/photos-service.ts';
+
 export const LandingToc = () => (
   <Section tone="paper" spacing="ample" id="sommaire">
     <TableOfContents.Root>
@@ -10,7 +12,7 @@ export const LandingToc = () => (
           Sommaire
         </Eyebrow>
         <TableOfContents.Title>
-          Sept chapitres,
+          Six chapitres,
           <br />
           une seule journée
         </TableOfContents.Title>
@@ -21,49 +23,44 @@ export const LandingToc = () => (
           <TableOfContents.Number>I.</TableOfContents.Number>
           <TableOfContents.Chapter>Préparatifs</TableOfContents.Chapter>
           <TableOfContents.Time>11h00</TableOfContents.Time>
-          <TableOfContents.Count>64 photos</TableOfContents.Count>
+          <TableOfContents.Count>{getChapterCount('preparatifs')} photos</TableOfContents.Count>
         </TableOfContents.Row>
 
-        <TableOfContents.Row href="#eglise">
+        <TableOfContents.Row href="#ceremonie-eglise">
           <TableOfContents.Number>II.</TableOfContents.Number>
-          <TableOfContents.Chapter>Église</TableOfContents.Chapter>
-          <TableOfContents.Time>14h30</TableOfContents.Time>
-          <TableOfContents.Count>92 photos</TableOfContents.Count>
-        </TableOfContents.Row>
-
-        <TableOfContents.Row href="#ceremonie">
-          <TableOfContents.Number>III.</TableOfContents.Number>
           <TableOfContents.Chapter>Cérémonie</TableOfContents.Chapter>
           <TableOfContents.Time>14h30 — 15h30</TableOfContents.Time>
-          <TableOfContents.Count>58 photos</TableOfContents.Count>
+          <TableOfContents.Count>
+            {getChapterCount('ceremonie-eglise')} photos
+          </TableOfContents.Count>
         </TableOfContents.Row>
 
         <TableOfContents.Row href="#seance-couple">
-          <TableOfContents.Number>IV.</TableOfContents.Number>
+          <TableOfContents.Number>III.</TableOfContents.Number>
           <TableOfContents.Chapter>Séance Couple</TableOfContents.Chapter>
           <TableOfContents.Time>15h45</TableOfContents.Time>
-          <TableOfContents.Count>41 photos</TableOfContents.Count>
+          <TableOfContents.Count>{getChapterCount('seance-couple')} photos</TableOfContents.Count>
         </TableOfContents.Row>
 
         <TableOfContents.Row href="#cocktail">
-          <TableOfContents.Number>V.</TableOfContents.Number>
+          <TableOfContents.Number>IV.</TableOfContents.Number>
           <TableOfContents.Chapter>Cocktail</TableOfContents.Chapter>
           <TableOfContents.Time>17h00</TableOfContents.Time>
-          <TableOfContents.Count>73 photos</TableOfContents.Count>
+          <TableOfContents.Count>{getChapterCount('cocktail')} photos</TableOfContents.Count>
         </TableOfContents.Row>
 
         <TableOfContents.Row href="#soiree">
-          <TableOfContents.Number>VI.</TableOfContents.Number>
+          <TableOfContents.Number>V.</TableOfContents.Number>
           <TableOfContents.Chapter>Soirée</TableOfContents.Chapter>
           <TableOfContents.Time>20h00</TableOfContents.Time>
-          <TableOfContents.Count>86 photos</TableOfContents.Count>
+          <TableOfContents.Count>{getChapterCount('soiree')} photos</TableOfContents.Count>
         </TableOfContents.Row>
 
         <TableOfContents.Row href="#dancefloor">
-          <TableOfContents.Number>VII.</TableOfContents.Number>
+          <TableOfContents.Number>VI.</TableOfContents.Number>
           <TableOfContents.Chapter>Dancefloor</TableOfContents.Chapter>
           <TableOfContents.Time>23h00</TableOfContents.Time>
-          <TableOfContents.Count>110 photos</TableOfContents.Count>
+          <TableOfContents.Count>{getChapterCount('dancefloor')} photos</TableOfContents.Count>
         </TableOfContents.Row>
       </TableOfContents.List>
     </TableOfContents.Root>

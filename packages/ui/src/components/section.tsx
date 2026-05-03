@@ -23,6 +23,8 @@ const sectionVariants = cva('relative z-3 scroll-mt-10 px-6', {
 
 type SectionProps = ComponentPropsWithoutRef<'section'> & VariantProps<typeof sectionVariants>;
 
+export type SectionTone = NonNullable<VariantProps<typeof sectionVariants>['tone']>;
+
 export const Section = ({ tone, spacing, className, ...props }: SectionProps) => (
   <section className={cn(sectionVariants({ tone, spacing }), className)} {...props} />
 );

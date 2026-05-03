@@ -21,7 +21,7 @@ export const LandingFacts = () => {
         <Facts.Cell>
           <Facts.Label>Le lieu</Facts.Label>
           <Facts.Value>Cathédrale &amp; Château</Facts.Value>
-          <Facts.Sub>CÉRÉMONIE &amp; RÉCEPTION</Facts.Sub>
+          <Facts.Sub>SAINT-ANTONIN · RIVENEUVE DU BOSC</Facts.Sub>
         </Facts.Cell>
         <Facts.Cell>
           <Facts.Label>Depuis ce jour</Facts.Label>

@@ -54,6 +54,9 @@ catalogs:
     react-dom:
       specifier: ^19.2.5
       version: 19.2.5
+    react-photo-album:
+      specifier: ^3.2.1
+      version: 3.6.0
     shadcn:
       specifier: ^4.6.0
       version: 4.6.0
@@ -136,6 +139,9 @@ importers:
       '@fontsource-variable/inter':
         specifier: 'catalog:'
         version: 5.2.8
+      blurhash:
+        specifier: 'catalog:'
+        version: 2.0.5
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -154,6 +160,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.5(react@19.2.5)
+      react-photo-album:
+        specifier: 'catalog:'
+        version: 3.6.0(@types/react@19.2.14)(react@19.2.5)
       shadcn:
         specifier: 'catalog:'
         version: 4.6.0(@types/node@24.12.2)(typescript@6.0.3)
@@ -4021,6 +4030,16 @@ packages:
     resolution: {integrity: sha512-J5bAZz+DXMMwW/wV3xzKke59Af6CHY7G4uYLN1OvBcKEsWOs4pQExj86BBKamxl/Ik5bx9whOrvBlSDfWzgSag==}
     peerDependencies:
       react: ^19.2.5
+
+  react-photo-album@3.6.0:
+    resolution: {integrity: sha512-W9NgI+0XxOYF/FLQJ/ZiKsizNQtGtgDdiFgojmTmpBKDGeGiWKfSzmbw3v9WAqzimPeiFJ2sEb9DO0nHRHP/OA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/react': ^18 || ^19
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   react-remove-scroll-bar@2.3.8:
     resolution: {integrity: sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==}
@@ -8298,6 +8317,12 @@ snapshots:
     dependencies:
       react: 19.2.5
       scheduler: 0.27.0
+
+  react-photo-album@3.6.0(@types/react@19.2.14)(react@19.2.5):
+    dependencies:
+      react: 19.2.5
+    optionalDependencies:
+      '@types/react': 19.2.14
 
   react-remove-scroll-bar@2.3.8(@types/react@19.2.14)(react@19.2.5):
     dependencies:

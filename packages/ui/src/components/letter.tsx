@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '#/lib/utils.ts';
 
 const LetterRoot = ({ className, ...props }: ComponentPropsWithoutRef<'div'>) => (
-  <div className={cn('mx-auto max-w-letter text-center', className)} {...props} />
+  <div className={cn('mx-auto max-w-letter text-center text-pretty', className)} {...props} />
 );
 
 const LetterTitle = ({ className, ...props }: ComponentPropsWithoutRef<'h2'>) => (
