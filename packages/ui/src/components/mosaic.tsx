@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentPropsWithoutRef } from 'react';
+import { useCallback, useMemo, useState, type ComponentPropsWithoutRef } from 'react';
 import { RowsPhotoAlbum, type Photo as AlbumImage, type RenderImage } from 'react-photo-album';
 
 import { blurhashToDataUrl } from '#/lib/blurhash.ts';
@@ -14,11 +14,14 @@ export type MosaicPhoto = {
   srcSet: { avif: string; webp: string };
 };
 
+export type MosaicPhotoAt = { photo: MosaicPhoto; index: number };
+
 type AlbumPhoto = AlbumImage & { source: MosaicPhoto };
 
 type MosaicProps = Omit<ComponentPropsWithoutRef<'div'>, 'children'> & {
   photos: readonly MosaicPhoto[];
-  alt: (photo: MosaicPhoto, index: number) => string;
+  alt: (at: MosaicPhotoAt) => string;
+  onPhotoClick: (at: MosaicPhotoAt) => void;
 };
 
 const targetRowHeight = (containerWidth: number) => {
@@ -33,7 +36,7 @@ const targetRowHeight = (containerWidth: number) => {
   return 360;
 };
 
-export const Mosaic = ({ photos, alt, className, ...props }: MosaicProps) => {
+export const Mosaic = ({ photos, alt, onPhotoClick, className, ...props }: MosaicProps) => {
   const albumPhotos = useMemo<AlbumPhoto[]>(
     () =>
       photos.map((photo, index) => ({
@@ -41,10 +44,22 @@ export const Mosaic = ({ photos, alt, className, ...props }: MosaicProps) => {
         src: photo.src,
         width: photo.width,
         height: photo.height,
-        alt: alt(photo, index),
+        alt: alt({ photo, index }),
         source: photo,
       })),
     [photos, alt],
+  );
+
+  const renderImage = useCallback<RenderImage<AlbumPhoto>>(
+    (imgProps, { photo, width, index }) => (
+      <MosaicTile
+        photo={photo}
+        width={width}
+        alt={imgProps.alt}
+        onClick={() => onPhotoClick({ photo: photo.source, index })}
+      />
+    ),
+    [onPhotoClick],
   );
 
   return (
@@ -59,32 +74,32 @@ export const Mosaic = ({ photos, alt, className, ...props }: MosaicProps) => {
   );
 };
 
-const renderImage: RenderImage<AlbumPhoto> = (imgProps, { photo, width }) => (
-  <MosaicTile photo={photo} renderedWidth={width} alt={imgProps.alt} />
-);
-
 type MosaicTileProps = {
   photo: AlbumPhoto;
-  renderedWidth: number;
+  width: number;
   alt: string | undefined;
+  onClick: () => void;
 };
 
-const MosaicTile = ({ photo, renderedWidth, alt }: MosaicTileProps) => {
+const MosaicTile = ({ photo, width, alt, onClick }: MosaicTileProps) => {
   const { source } = photo;
-  const [ref, near] = useNearViewport<HTMLDivElement>();
+  const [ref, near] = useNearViewport<HTMLButtonElement>();
   const [loaded, setLoaded] = useState(false);
   const blurDataUrl = useMemo(
     () => (near ? blurhashToDataUrl(source.blurhash) : null),
     [near, source.blurhash],
   );
 
-  const sizes = `${Math.round(renderedWidth)}px`;
+  const sizes = `${Math.round(width)}px`;
 
   return (
-    <div
+    <button
+      type="button"
       ref={ref}
+      onClick={onClick}
+      aria-label={alt ?? 'Ouvrir la photo'}
       className={cn(
-        'group relative block w-full overflow-hidden bg-paper-shade',
+        'group relative block w-full cursor-zoom-in overflow-hidden bg-paper-shade p-0 text-left',
         'transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform',
         'hover:-translate-y-0.75 hover:shadow-[0_24px_50px_rgb(42_26_16/0.22)]',
         'after:pointer-events-none after:absolute after:inset-0 after:border after:border-ink/5',
@@ -113,6 +128,6 @@ const MosaicTile = ({ photo, renderedWidth, alt }: MosaicTileProps) => {
           />
         </picture>
       ) : null}
-    </div>
+    </button>
   );
 };
